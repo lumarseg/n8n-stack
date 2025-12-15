@@ -115,7 +115,7 @@ docker compose rm runner-py-2
   - Python runners: Use `task-runner-launcher python`
 - **Max Concurrency**: 5 tasks per runner
 - **Auto Shutdown**: 15 seconds after idle
-- **Broker URI**: Connects to main:5679
+- **Broker URI**: Connects to http://main:5679
 - **Health Check**: Exposed on port 5681
 
 ### Traefik Integration
