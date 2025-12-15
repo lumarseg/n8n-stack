@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is an n8n automation platform deployment using Docker Compose with **Task Runners in External Mode**. The stack consists of n8n Main (web UI, webhook handler, and task broker) and 3 Task Runner containers that execute JavaScript/Python code in isolated sandboxes.
+This is an n8n automation platform deployment using Docker Compose with **Task Runners in External Mode**. The stack consists of n8n Main (web UI, webhook handler, and task broker) and 4 specialized Task Runner containers: 2 for JavaScript and 2 for Python execution in isolated sandboxes.
 
 ## Architecture
 
 ### Task Runners Design
 - **n8n Main**: Handles web UI, webhooks, and operates the task broker on port 5679
-- **Task Runners (3x)**: Sidecar containers using `n8nio/runners` image that execute code in sandboxed environments
+- **JavaScript Runners (2x)**: Specialized sidecar containers for JavaScript code execution
+- **Python Runners (2x)**: Specialized sidecar containers for Python code execution
+- **Image**: All runners use `n8nio/runners` image with different launchers
 - **Authentication**: Task runners authenticate with Main using `N8N_RUNNERS_AUTH_TOKEN`
 - **Shared Storage**: Main and all runners share `n8n_storage` volume for workflow data
 - **Concurrency**: Each runner handles up to 5 concurrent tasks, with 15s auto-shutdown timeout
@@ -50,16 +52,18 @@ docker compose up -d
 # View logs
 docker compose logs -f
 docker compose logs -f main
-docker compose logs -f runner-1
-docker compose logs -f runner-2
-docker compose logs -f runner-3
+docker compose logs -f runner-js-1
+docker compose logs -f runner-js-2
+docker compose logs -f runner-py-1
+docker compose logs -f runner-py-2
 
 # Stop services
 docker compose down
 
 # Restart specific service
 docker compose restart main
-docker compose restart runner-1
+docker compose restart runner-js-1
+docker compose restart runner-py-1
 
 # View service status
 docker compose ps
@@ -69,26 +73,30 @@ docker compose ps
 ```bash
 # Check healthchecks
 docker inspect n8n-main | grep -A 10 Health
-docker inspect n8n-runner-1 | grep -A 10 Health
+docker inspect n8n-runner-js-1 | grep -A 10 Health
+docker inspect n8n-runner-py-1 | grep -A 10 Health
 
 # View runner status
-docker compose logs runner-1 | grep -i "task-runner"
+docker compose logs runner-js-1 | grep -i "task-runner"
+docker compose logs runner-py-1 | grep -i "task-runner"
 
 # Check task broker connectivity
 docker exec n8n-main wget --spider http://localhost:5679/healthz
 
 # View runner healthcheck
-docker exec n8n-runner-1 wget --spider http://localhost:5681/healthz
+docker exec n8n-runner-js-1 wget --spider http://localhost:5681/healthz
+docker exec n8n-runner-py-1 wget --spider http://localhost:5681/healthz
 ```
 
 ### Scaling Task Runners
 ```bash
-# Add a new runner (edit docker-compose.yml first)
-docker compose up -d runner-4
+# Add new runners (edit docker-compose.yml first)
+docker compose up -d runner-js-3   # Third JavaScript runner
+docker compose up -d runner-py-3   # Third Python runner
 
 # Remove a runner
-docker compose stop runner-3
-docker compose rm runner-3
+docker compose stop runner-py-2
+docker compose rm runner-py-2
 ```
 
 ## Configuration
@@ -102,7 +110,9 @@ docker compose rm runner-3
 
 ### Task Runner Configuration
 - **Version**: n8nio/runners:2.0.1 (must match n8n version)
-- **Runtime**: JavaScript task runner launcher
+- **Runtimes**:
+  - JavaScript runners: Use `task-runner-launcher javascript`
+  - Python runners: Use `task-runner-launcher python`
 - **Max Concurrency**: 5 tasks per runner
 - **Auto Shutdown**: 15 seconds after idle
 - **Broker URI**: Connects to main:5679

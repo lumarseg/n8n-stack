@@ -6,13 +6,14 @@
 # - [001] Volúmenes: n8n_storage
 # - [002] Redes: backend_net, proxy_net (external)
 # - [020] n8n Main: UI, webhooks, task broker
-# - [040] Task Runners: JavaScript/Python execution (2-3 runners)
+# - [040] Task Runners: 2 JavaScript + 2 Python runners especializados
 # - [100] Healthchecks: Main, Task Runners
 # - [200] Traefik: Labels, routing, SSL (Main)
 # - [300] Security: Rate limiting, headers (Main)
 #
 # ARQUITECTURA:
 # - Task Runners Mode: Main maneja broker, runners ejecutan código en sandbox
+# - Runners especializados: 2 para JavaScript, 2 para Python
 # - Task runners en contenedores sidecar separados
 # - Autenticación con N8N_RUNNERS_AUTH_TOKEN
 # - Shared storage: Main y runners comparten n8n_storage
@@ -73,8 +74,8 @@ services:
 
       # [020.3] PostgreSQL (servicio en postgres.yaml)
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+      - DB_POSTGRESDB_PORT=${POSTGRES_PORT}
       - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
       - DB_POSTGRESDB_USER=${POSTGRES_USER}
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
@@ -147,23 +148,29 @@ services:
       - "traefik.http.services.n8n.loadbalancer.healthcheck.scheme=http"
 
   # ===========================================================================
-  # [040] Task Runners - JavaScript/Python execution
+  # [040] Task Runners - Runners especializados para ejecución de código
   # ===========================================================================
-  runner-1:
+  # - 2 runners especializados en JavaScript
+  # - 2 runners especializados en Python
+  # - Cada runner: max 5 tareas concurrentes, auto-shutdown 15s
+  # ===========================================================================
+
+  # JavaScript Runners (2x)
+  runner-js-1:
     image: n8nio/runners:2.0.1
     restart: unless-stopped
-    container_name: n8n-runner-1
+    container_name: n8n-runner-js-1
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     entrypoint: ["/bin/sh", "-c", "/usr/local/bin/task-runner-launcher javascript;"]
 
     environment:
-      # [040.1] Task Runner Config
+      # [040.1] JavaScript Runner 1 Config
       - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
       - N8N_RUNNERS_TASK_BROKER_URI=main:5679
-      - N8N_RUNNERS_MAX_CONCURRENCY=5
-      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=15
+      - N8N_RUNNERS_MAX_CONCURRENCY=${RUNNERS_JS_MAX_CONCURRENCY}
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=${RUNNERS_JS_AUTO_SHUTDOWN}
 
     volumes:
       - n8n_storage:/home/node/.n8n
@@ -171,7 +178,7 @@ services:
     networks:
       - backend_net
 
-    # [100.3] Healthcheck Runner 1
+    # [100.3] Healthcheck JavaScript Runner 1
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5681/healthz || exit 1"]
       interval: 10s
@@ -183,21 +190,21 @@ services:
       main:
         condition: service_healthy
 
-  runner-2:
+  runner-js-2:
     image: n8nio/runners:2.0.1
     restart: unless-stopped
-    container_name: n8n-runner-2
+    container_name: n8n-runner-js-2
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     entrypoint: ["/bin/sh", "-c", "/usr/local/bin/task-runner-launcher javascript;"]
 
     environment:
-      # [040.2] Task Runner Config
+      # [040.2] JavaScript Runner 2 Config
       - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
       - N8N_RUNNERS_TASK_BROKER_URI=main:5679
-      - N8N_RUNNERS_MAX_CONCURRENCY=5
-      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=15
+      - N8N_RUNNERS_MAX_CONCURRENCY=${RUNNERS_JS_MAX_CONCURRENCY}
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=${RUNNERS_JS_AUTO_SHUTDOWN}
 
     volumes:
       - n8n_storage:/home/node/.n8n
@@ -205,7 +212,7 @@ services:
     networks:
       - backend_net
 
-    # [100.4] Healthcheck Runner 2
+    # [100.4] Healthcheck JavaScript Runner 2
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5681/healthz || exit 1"]
       interval: 10s
@@ -217,21 +224,22 @@ services:
       main:
         condition: service_healthy
 
-  runner-3:
+  # Python Runners (2x)
+  runner-py-1:
     image: n8nio/runners:2.0.1
     restart: unless-stopped
-    container_name: n8n-runner-3
+    container_name: n8n-runner-py-1
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-    entrypoint: ["/bin/sh", "-c", "/usr/local/bin/task-runner-launcher javascript;"]
+    entrypoint: ["/bin/sh", "-c", "/usr/local/bin/task-runner-launcher python;"]
 
     environment:
-      # [040.3] Task Runner Config
+      # [040.3] Python Runner 1 Config
       - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
       - N8N_RUNNERS_TASK_BROKER_URI=main:5679
-      - N8N_RUNNERS_MAX_CONCURRENCY=5
-      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=15
+      - N8N_RUNNERS_MAX_CONCURRENCY=${RUNNERS_PY_MAX_CONCURRENCY}
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=${RUNNERS_PY_AUTO_SHUTDOWN}
 
     volumes:
       - n8n_storage:/home/node/.n8n
@@ -239,7 +247,41 @@ services:
     networks:
       - backend_net
 
-    # [100.5] Healthcheck Runner 3
+    # [100.5] Healthcheck Python Runner 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5681/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    depends_on:
+      main:
+        condition: service_healthy
+
+  runner-py-2:
+    image: n8nio/runners:2.0.1
+    restart: unless-stopped
+    container_name: n8n-runner-py-2
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    entrypoint: ["/bin/sh", "-c", "/usr/local/bin/task-runner-launcher python;"]
+
+    environment:
+      # [040.4] Python Runner 2 Config
+      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
+      - N8N_RUNNERS_TASK_BROKER_URI=main:5679
+      - N8N_RUNNERS_MAX_CONCURRENCY=${RUNNERS_PY_MAX_CONCURRENCY}
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=${RUNNERS_PY_AUTO_SHUTDOWN}
+
+    volumes:
+      - n8n_storage:/home/node/.n8n
+
+    networks:
+      - backend_net
+
+    # [100.6] Healthcheck Python Runner 2
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5681/healthz || exit 1"]
       interval: 10s
