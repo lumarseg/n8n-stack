@@ -121,7 +121,7 @@ docker compose rm runner-py-2
 
 ### Traefik Integration
 - Rate limiting: 100 req/min average, 50 burst
-- Security headers: HSTS, XSS protection, frame deny, CSP
+- Security headers: HSTS, XSS protection, X-Frame-Options SAMEORIGIN, CSP frame-ancestors
 - Automatic HTTPS redirect
 - Let's Encrypt certificate resolver
 - Healthcheck path: `/healthz`

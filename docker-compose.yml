@@ -120,7 +120,8 @@ services:
       - "traefik.http.middlewares.n8n-ratelimit.ratelimit.burst=50"
 
       # [300.2] Security Headers
-      - "traefik.http.middlewares.n8n-security.headers.framedeny=true"
+      - "traefik.http.middlewares.n8n-security.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.n8n-security.headers.customResponseHeaders.Content-Security-Policy=frame-ancestors 'self'"
       - "traefik.http.middlewares.n8n-security.headers.browserxssfilter=true"
       - "traefik.http.middlewares.n8n-security.headers.contenttypenosniff=true"
       - "traefik.http.middlewares.n8n-security.headers.stsSeconds=31536000"
