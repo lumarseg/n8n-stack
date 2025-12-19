@@ -107,6 +107,7 @@ docker compose rm runner-py-2
 - **Task Broker**: Listens on 0.0.0.0:5679 for runner connections
 - **Security**: Environment variable access blocked in nodes, bare git repos disabled
 - **Domain**: app.n8n.luismaroto.com (configured in Traefik labels)
+- **Execution Pruning**: Auto-delete executions older than 7 days (168 hours)
 
 ### Task Runner Configuration
 - **Version**: n8nio/runners:2.0.1 (must match n8n version)

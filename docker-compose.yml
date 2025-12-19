@@ -90,6 +90,11 @@ services:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
       - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
 
+      # [020.6] Execution Pruning
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      - EXECUTIONS_DATA_PRUNE_HARD_DELETE_BUFFER=1
+
     volumes:
       - n8n_storage:/home/node/.n8n
 
