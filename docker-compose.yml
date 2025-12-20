@@ -50,7 +50,7 @@ services:
   # [020] n8n Main - Interfaz web, webhooks, task broker
   # ===========================================================================
   main:
-    image: n8nio/n8n:2.0.1
+    image: n8nio/n8n:2.1.1
     restart: unless-stopped
     container_name: n8n-main
     extra_hosts:
