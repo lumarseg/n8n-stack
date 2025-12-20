@@ -163,7 +163,7 @@ services:
 
   # JavaScript Runners (2x)
   runner-js-1:
-    image: n8nio/runners:2.0.1
+    image: n8nio/runners:2.1.1
     restart: unless-stopped
     container_name: n8n-runner-js-1
     extra_hosts:
@@ -197,7 +197,7 @@ services:
         condition: service_healthy
 
   runner-js-2:
-    image: n8nio/runners:2.0.1
+    image: n8nio/runners:2.1.1
     restart: unless-stopped
     container_name: n8n-runner-js-2
     extra_hosts:
@@ -232,7 +232,7 @@ services:
 
   # Python Runners (2x)
   runner-py-1:
-    image: n8nio/runners:2.0.1
+    image: n8nio/runners:2.1.1
     restart: unless-stopped
     container_name: n8n-runner-py-1
     extra_hosts:
@@ -266,7 +266,7 @@ services:
         condition: service_healthy
 
   runner-py-2:
-    image: n8nio/runners:2.0.1
+    image: n8nio/runners:2.1.1
     restart: unless-stopped
     container_name: n8n-runner-py-2
     extra_hosts:
